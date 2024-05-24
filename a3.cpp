@@ -41,6 +41,7 @@ int main()
             hCsr[offset++] = graph[i][j];
         }
     }
+    hOffset[num_meshes] = offset;
 
     int num_trans;
     std::cin >> num_trans;
@@ -66,6 +67,7 @@ int main()
     std::vector<int> parent(num_meshes, -1);
     std::vector<int> grandparent(num_meshes, -1);
     std::vector<int> grid(R*C, 0);
+	auto start = std::chrono::high_resolution_clock::now () ;
     sycl::queue h;
 
     {
@@ -87,46 +89,42 @@ int main()
                             int end = hOffset_acc[i + 1];
                             for (int j = start; j < end; j++)
                             {
-                                if (parent_acc[hCsr_acc[j]] == -1)
-                                {
-                                    parent_acc[hCsr_acc[j]] = i;
-                                }
+                                parent_acc[hCsr_acc[j]] = i;
                             } }); });
         int updates = 32 - __builtin_clz(V);
 
         for (int i = 0; i < updates; i++)
         {
 
-            h.submit([&](sycl::handler &hh)
-                     {
-                        sycl::accessor parent_acc(parent_buf, hh, sycl::read_write);
-                        sycl::accessor grand_acc(grandparent_buf, hh, sycl::read_write);
-                        if(i% 2 == 1) {
-                            auto tmp = parent_acc;
-                            parent_acc = grand_acc;
-                            grand_acc = tmp;
-                        }
-                        sycl::accessor up_acc(up_buf, hh, sycl::read_only);
-                        sycl::accessor right_acc(right_buf, hh, sycl::read_only);
-                        sycl::accessor cum_up_acc(cum_up_buf, hh, sycl::read_write);
-                        sycl::accessor cum_right_acc(cum_right_buf, hh, sycl::read_write);
+            h.submit([&](sycl::handler &hh){
+                sycl::accessor parent_acc(parent_buf, hh, sycl::read_write);
+                sycl::accessor grand_acc(grandparent_buf, hh, sycl::read_write);
+                if(i% 2 == 1) {
+                    // auto tmp = parent_acc;
+                    // parent_acc = grand_acc;
+                    // grand_acc = tmp;
+                    std::swap(parent_acc, grand_acc);
+                }
+                sycl::accessor up_acc(up_buf, hh, sycl::read_only);
+                sycl::accessor right_acc(right_buf, hh, sycl::read_only);
+                sycl::accessor cum_up_acc(cum_up_buf, hh, sycl::read_write);
+                sycl::accessor cum_right_acc(cum_right_buf, hh, sycl::read_write);
 
-                         // update parent of node in parent accessor
+                 // update parent of node in parent accessor
 
-                        hh.parallel_for(num_meshes, [=](sycl::id<1> i)
-                            {
-                            int par = parent_acc[i];
-                            if(par >= 0) {
-                                cum_up_acc[i] = cum_up_acc[i] + up_acc[par];
-                                cum_right_acc[i] = cum_right_acc[i] + right_acc[par];
-                                grand_acc[i] = parent_acc[par];
-                            } else {
-                                grand_acc[i] = -1;
-                            } 
-                            }
-                        ); 
-                        }
-                        );
+                hh.parallel_for(num_meshes, [=](sycl::id<1> i)
+                    {
+                    int par = parent_acc[i];
+                    if(par >= 0) {
+                        cum_up_acc[i] = cum_up_acc[i] + up_acc[par];
+                        cum_right_acc[i] = cum_right_acc[i] + right_acc[par];
+                        grand_acc[i] = parent_acc[par];
+                    } else {
+                        grand_acc[i] = -1;
+                    } 
+                    }
+                ); 
+            });
 
             h.submit([&](sycl::handler &hh) {
                 sycl::accessor up_acc (up_buf, hh, sycl::write_only);
@@ -138,6 +136,7 @@ int main()
                     right_acc[i] = cum_right_acc[i];
                 });
             });
+
 
         }
 
@@ -156,7 +155,6 @@ int main()
         std::vector<int> lock(R*C, 0);
         sycl::buffer lock_buf(lock); 
         sycl::buffer grid_buf(grid); 
-        std::cout << total << std::endl;
         h.submit([&](sycl::handler &hh) {
             sycl::accessor mesh_acc(mesh_buf, hh, sycl::read_only);
             sycl::accessor offset_acc(offset_buf, hh, sycl::read_only);
@@ -222,9 +220,15 @@ int main()
 
         });
 
-
+        h.wait();
 
     }
+	auto end  = std::chrono::high_resolution_clock::now () ;
+
+	std::chrono::duration<double, std::milli> timeTaken = end-start;
+
+	// printf ("execution time : %f\n", timeTaken) ;
+    std::cerr << "Execution time: " << timeTaken.count() << " milliseconds" << std::endl;
 
     // now we have the parent of each node
     // print the parents

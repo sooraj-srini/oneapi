@@ -1,3 +1,10 @@
 oneapi
 a3
 sycl.pdf
+*.out
+test/
+test.zip
+run.sh
+testgen.sh
+a3-input/*
+a3-output/*

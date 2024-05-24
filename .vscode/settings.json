@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "atomic": "cpp"
+        "atomic": "cpp",
+        "ostream": "cpp",
+        "ratio": "cpp"
     }
 }
