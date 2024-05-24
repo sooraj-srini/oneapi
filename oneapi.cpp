@@ -18,10 +18,10 @@ int main()
         // std::cout <<a[i] <<" " << b[i] << " " << c[i] <<std::endl;
     }
 
-    //these braces are to trigger write back from device memory to host memory
-    //once the buffer goes out of scope, ig
-    {
-        buffer A(a), B(b), C(c);
+    // these braces are to trigger write back from device memory to host memory
+    // once the buffer goes out of scope, ig
+        sycl::buffer A(a), B(b), C(c);
+        // C.set_write_back();
         std::cout << "Issuing work to gpu" << std::endl;
 
         Q.submit([&](handler &h)
@@ -30,11 +30,13 @@ int main()
         accessor aB(B, h, read_only);
         accessor aC(C, h, write_only);
 
+        
+         
         h.parallel_for(N, [=](id<1> i) {
             aC[i] = aA[i] + aB[i];
-        }); })
+        }); 
+        })
             .wait();
-    }
 
     std::cout << "finsiehd work to gpu" << std::endl;
 
