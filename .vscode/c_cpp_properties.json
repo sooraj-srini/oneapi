@@ -5,8 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/usr/include/c++/14.1.1",
-                "/opt/intel/oneapi/compiler/latest/linux/include/sycl/",
-                "/opt/intel/oneapi/compiler/2023.2.0/linux/include"
+                "/opt/intel/oneapi/compiler/latest/include/sycl/",
+                "/opt/intel/oneapi/compiler/2024.1/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/g++",
